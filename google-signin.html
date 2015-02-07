@@ -209,6 +209,27 @@ any apps you're building. See the Google Developers Console
       function handleAuthResult(authResult) {
         // Use the default handler for the immediate authentication.
         if (defaultHandler) {
+          if (authResult &&
+              authResult.error &&
+              authResult.error === 'user_signed_out') {
+            gapi.auth.authorize({
+                client_id: defaultHandler.clientId,
+                scope: defaultHandler.scopes,
+                cookie_policy: defaultHandler.cookiePolicy,
+                immediate: true,
+              },
+              function(authResult) {
+                if (authResult && authResult.access_token) {
+                  fireAuthEvent(authResult);
+                }
+              }
+            );
+          } else {
+            fireAuthEvent(authResult);
+          }
+        }
+
+        function fireAuthEvent(authResult) {
           defaultHandler.fire('core-signal', {
             'name': 'google-auth-result',
             'data': {
@@ -638,7 +659,9 @@ any apps you're building. See the Google Developers Console
         signOut: function () {
           flowComplete = false;
           this.fire('google-signout-attempted');
-          gapi.auth.signOut();
+          gapi.auth.setToken(null);
+          this.signedIn = false;
+          this.fire('google-signed-out');
         },
 
         signOutKeyPress: function (e) {
